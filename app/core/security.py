@@ -1,27 +1,34 @@
 """
 安全模块 - JWT 令牌生成/验证、密码哈希
+直接使用 bcrypt 库（避免 passlib 与 bcrypt 4.x 的兼容性问题）
 """
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# 密码哈希上下文
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    """对明文密码进行哈希"""
-    return pwd_context.hash(password)
+    """对明文密码进行哈希（bcrypt）"""
+    # bcrypt 要求密码不超过 72 字节，编码为 UTF-8
+    password_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        plain_bytes = plain_password.encode("utf-8")[:72]
+        hashed_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(plain_bytes, hashed_bytes)
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(

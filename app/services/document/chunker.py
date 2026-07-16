@@ -9,7 +9,7 @@ import re
 
 from app.core.config import settings
 from app.core.logging import log
-from app.services.document.loader import ParsedDocument
+from app.services.document.types import ParsedDocument
 
 
 @dataclass

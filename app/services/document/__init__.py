@@ -1,4 +1,5 @@
-from app.services.document.loader import DocumentLoader, ParsedDocument
+from app.services.document.types import ParsedDocument
+from app.services.document.loader import DocumentLoader
 from app.services.document.chunker import TextChunker, Chunk, ChunkResult
 from app.services.document.parser import (
     parse_pdf,

@@ -45,6 +45,18 @@ def list_users(
     )
 
 
+@router.get("/me", response_model=UserResponse, summary="获取当前登录用户信息")
+def get_current_user_info(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """获取当前登录用户的详细信息"""
+    user_obj = db.query(User).filter(User.id == user["user_id"]).first()
+    if user_obj is None:
+        raise NotFoundException("用户", user["user_id"])
+    return UserResponse.model_validate(user_obj)
+
+
 @router.get("/{user_id}", response_model=UserResponse, summary="获取用户详情")
 def get_user(
     user_id: UUID,
