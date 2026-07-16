@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual env
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
+
+# Data
+data/uploads/*
+data/logs/*
+!data/uploads/.gitkeep
+!data/logs/.gitkeep
+
+# Docker
+docker/data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Models (local cache)
+models/
+
+# WorkBuddy (IDE assistant data, not part of the project)
+.workbuddy/
+
+# Docker volumes
+docker/data/

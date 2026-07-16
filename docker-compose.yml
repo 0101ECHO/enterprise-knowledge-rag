@@ -1,0 +1,128 @@
+# ============================================================
+# 企业级知识库 RAG 系统 - Docker Compose 一键部署
+# 包含: 应用服务 + Qdrant 向量数据库 + PostgreSQL + Redis
+# ============================================================
+
+services:
+  # --- 应用服务 ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./data/logs:/app/data/logs
+      # 挂载 HuggingFace 模型缓存 (避免重复下载)
+      - hf_cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  # --- PostgreSQL 关系数据库 ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: rag-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-raguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-ragdb}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser} -d ${POSTGRES_DB:-ragdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # 性能调优
+    command: >
+      postgres
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c effective_cache_size=512MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=64MB
+
+  # --- Qdrant 向量数据库 ---
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: rag-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"  # gRPC 端口
+    environment:
+      QDRANT__LOG_LEVEL: INFO
+      # 如需启用 API Key 认证:
+      # QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/6333 && echo -e 'GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # --- Redis 缓存/消息队列 ---
+  redis:
+    image: redis:7-alpine
+    container_name: rag-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# --- 网络 ---
+networks:
+  rag-network:
+    driver: bridge
+    name: rag-network
+
+# --- 持久化卷 ---
+volumes:
+  postgres_data:
+    name: rag-postgres-data
+  qdrant_data:
+    name: rag-qdrant-data
+  redis_data:
+    name: rag-redis-data
+  hf_cache:
+    name: rag-hf-cache
