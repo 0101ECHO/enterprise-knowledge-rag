@@ -219,23 +219,23 @@ class QdrantVectorStore:
                     FieldCondition(key=key, match=MatchValue(value=value))
                 )
 
-        results = client.search(
+        results = client.query_points(
             collection_name=collection,
-            query_vector=query_vector,
+            query=query_vector,
             limit=k,
             score_threshold=threshold,
             query_filter=query_filter,
             with_payload=True,
-            search_params=SearchParams(hnsw_ef=128, exact=False),
+            search_params={"hnsw_ef": 128, "exact": False},
         )
 
         scored = []
-        for hit in results:
+        for point in results.points:
             scored.append({
-                "content": hit.payload.get("content", ""),
-                "score": hit.score,
-                "payload": hit.payload,
-                "point_id": hit.id,
+                "content": point.payload.get("content", ""),
+                "score": point.score,
+                "payload": point.payload,
+                "point_id": point.id,
             })
 
         log.info(

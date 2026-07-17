@@ -55,14 +55,16 @@ def create_knowledge_base(
     db: Session = Depends(get_db),
 ):
     """创建新知识库 (维护者/管理员)"""
-    # 生成集合名
-    kb_uuid = str(uuid.uuid4())
-    collection_name = QdrantVectorStore.collection_name(kb_uuid)
+    # 先生成 KB ID，用于 Qdrant collection 命名
+    import uuid as _uuid
+    kb_id = str(_uuid.uuid4())
 
     # 在 Qdrant 中创建集合
-    QdrantVectorStore.create_collection(kb_uuid, settings.EMBEDDING_DIMENSION)
+    collection_name = QdrantVectorStore.collection_name(kb_id)
+    QdrantVectorStore.create_collection(kb_id, settings.EMBEDDING_DIMENSION)
 
     kb = KnowledgeBase(
+        id=kb_id,
         tenant_id=user["tenant_id"],
         name=request.name,
         description=request.description,

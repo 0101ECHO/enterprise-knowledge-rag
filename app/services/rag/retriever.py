@@ -78,23 +78,32 @@ class RAGRetriever:
         )
 
     def _rerank(self, query: str, documents: list[dict]) -> list[dict]:
-        """重排序 - 基于交叉编码器 (如果可用)"""
+        """重排序 - 使用 Cross-Encoder Reranker 提升检索精度"""
         try:
-            # 使用 BGE-M3 的 ColBERT 进行重排序 (可选)
-            from FlagEmbedding import BGEM3FlagModel
+            from app.services.rag.reranker import get_reranker
 
-            model = self.embedder._model
-            if hasattr(model, "compute_score"):
-                pairs = [[query, doc["content"]] for doc in documents]
-                scores = model.compute_score(pairs, max_passage_length=128)
-                for i, doc in enumerate(documents):
-                    doc["rerank_score"] = float(scores[i]) if hasattr(scores, "__getitem__") else float(scores)
-                documents.sort(key=lambda x: x.get("rerank_score", 0), reverse=True)
-                log.info(f"重排序完成, top_score={documents[0].get('rerank_score', 0):.4f}")
+            reranker = get_reranker()
+            contents = [doc["content"] for doc in documents]
+            top_k = min(settings.RERANK_TOP_K, len(documents))
+
+            ranked = reranker.rerank(query, contents, top_k=top_k)
+
+            # 重新排序
+            reranked = []
+            for idx, score in ranked:
+                doc = documents[idx].copy()
+                doc["rerank_score"] = float(score)
+                reranked.append(doc)
+
+            if reranked:
+                log.info(
+                    f"Reranker 完成: {len(reranked)}/{len(documents)} 结果, "
+                    f"top_score={reranked[0].get('rerank_score', 0):.4f}"
+                )
+            return reranked
         except Exception as e:
             log.warning(f"重排序失败，使用原始排序: {e}")
-
-        return documents
+            return documents
 
     def retrieve_multi_query(
         self,

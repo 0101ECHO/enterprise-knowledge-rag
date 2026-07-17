@@ -180,7 +180,8 @@ def process_document_task(document_id: str, tenant_id: str, kb_id: str):
                 "source_page": chunk.page,
                 "content": chunk.content,
             }
-            points.append({"vector": vector.tolist(), **payload})
+            point_vector = vector.tolist() if hasattr(vector, "tolist") else list(vector)
+            points.append({"vector": point_vector, **payload})
 
         point_ids = QdrantVectorStore.upsert_points(kb_id, points)
 
@@ -283,6 +284,42 @@ def get_document(
         raise NotFoundException("文档", document_id)
 
     return DocumentResponse.model_validate(doc)
+
+
+@router.delete("/{document_id}", summary="删除文档")
+def delete_document(
+    document_id: str,
+    user: dict = Depends(require_maintainer),
+    db: Session = Depends(get_db),
+):
+    """删除文档及其向量数据"""
+    doc = db.query(Document).filter(
+        Document.id == document_id,
+        Document.tenant_id == user["tenant_id"],
+        Document.is_deleted == False,
+    ).first()
+
+    if doc is None:
+        raise NotFoundException("文档", document_id)
+
+    # 删除 Qdrant 向量
+    try:
+        QdrantVectorStore.delete_by_document(str(doc.kb_id), document_id, user["tenant_id"])
+    except Exception as e:
+        log.warning(f"删除向量失败: {e}")
+
+    # 软删除文档 + 硬删除分块
+    db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
+    doc.is_deleted = True
+    doc.is_active = False
+
+    # 更新知识库统计
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == doc.kb_id).first()
+    if kb and kb.document_count > 0:
+        kb.document_count -= 1
+
+    db.commit()
+    return {"message": "文档已删除", "id": document_id}
 
 
 @router.get("/{document_id}/status", response_model=DocumentProcessStatus, summary="获取文档处理状态")

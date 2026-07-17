@@ -72,7 +72,10 @@ class Settings(BaseSettings):
     # --- RAG ---
     RETRIEVAL_TOP_K: int = 5
     RETRIEVAL_SCORE_THRESHOLD: float = 0.5
-    RERANK_ENABLED: bool = False
+    RERANK_ENABLED: bool = True
+    RERANKER_MODEL_NAME: str = "BAAI/bge-reranker-v2-m3"
+    RERANKER_MAX_LENGTH: int = 512
+    RERANK_TOP_K: int = 5
 
     # --- OCR ---
     OCR_ENABLED: bool = True

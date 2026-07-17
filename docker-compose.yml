@@ -15,6 +15,11 @@ services:
       - "${APP_PORT:-8000}:8000"
     env_file:
       - .env
+    environment:
+      # HuggingFace 国内镜像 (加速模型下载)
+      - HF_ENDPOINT=https://hf-mirror.com
+      - HF_HUB_ENABLE_HF_TRANSFER=0
+      - HF_HUB_DISABLE_XET=1
     volumes:
       - ./data/uploads:/app/data/uploads
       - ./data/logs:/app/data/logs

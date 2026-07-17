@@ -1,14 +1,20 @@
 """
 BGE-M3 Embedding 服务
-基于 sentence-transformers 加载 BAAI/bge-m3 模型
-支持: 多语言、稠密向量、稀疏向量、ColBERT 向量
+使用 sentence-transformers 加载 BAAI/bge-m3 模型
+支持: 多语言、稠密向量 (1024维)
 """
 
+import os
 from typing import Optional
 import numpy as np
 
 from app.core.config import settings
 from app.core.logging import log
+
+# 设置 HuggingFace 国内镜像 (解决模型下载被墙问题)
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 
 class BGE_M3_Embedder:
@@ -27,37 +33,22 @@ class BGE_M3_Embedder:
             self._load_model()
 
     def _load_model(self):
-        """加载 BGE-M3 模型"""
-        try:
-            from FlagEmbedding import BGEM3FlagModel
+        """加载 BGE-M3 模型 (优先 sentence-transformers，避免 FlagEmbedding 的 .DS_Store 问题)"""
+        model_name = settings.EMBEDDING_MODEL_NAME
+        log.info(f"加载 Embedding 模型: {model_name} (via sentence-transformers)")
 
-            self._model = BGEM3FlagModel(
-                settings.EMBEDDING_MODEL_NAME,
-                use_fp16=settings.EMBEDDING_MODEL_DEVICE != "cpu",
-                device=settings.EMBEDDING_MODEL_DEVICE,
-            )
-            log.info(
-                f"BGE-M3 模型加载成功: {settings.EMBEDDING_MODEL_NAME}, "
-                f"device={settings.EMBEDDING_MODEL_DEVICE}"
-            )
-        except ImportError:
-            log.warning("FlagEmbedding 未安装，尝试使用 sentence-transformers")
-            self._load_with_sentence_transformers()
-        except Exception as e:
-            log.error(f"BGE-M3 模型加载失败: {e}")
-            raise
-
-    def _load_with_sentence_transformers(self):
-        """使用 sentence-transformers 作为后备"""
         try:
             from sentence_transformers import SentenceTransformer
 
             self._model = SentenceTransformer(
-                settings.EMBEDDING_MODEL_NAME,
+                model_name,
                 device=settings.EMBEDDING_MODEL_DEVICE,
+                trust_remote_code=True,
             )
-            self._use_st = True
-            log.info(f"sentence-transformers 加载成功: {settings.EMBEDDING_MODEL_NAME}")
+            log.info(
+                f"Embedding 模型加载成功: {model_name}, "
+                f"device={settings.EMBEDDING_MODEL_DEVICE}"
+            )
         except Exception as e:
             log.error(f"sentence-transformers 加载失败: {e}")
             raise
@@ -74,25 +65,13 @@ class BGE_M3_Embedder:
         if isinstance(texts, str):
             texts = [texts]
 
-        if hasattr(self, "_use_st") and self._use_st:
-            embeddings = self._model.encode(
-                texts,
-                batch_size=settings.EMBEDDING_BATCH_SIZE,
-                normalize_embeddings=True,
-                show_progress_bar=False,
-            )
-            return np.array(embeddings)
-
-        # FlagEmbedding BGEM3FlagModel
         embeddings = self._model.encode(
             texts,
             batch_size=settings.EMBEDDING_BATCH_SIZE,
-            max_length=8192,
-            return_dense=True,
-            return_sparse=False,
-            return_colbert_vecs=False,
+            normalize_embeddings=True,
+            show_progress_bar=False,
         )
-        return np.array(embeddings["dense_vecs"])
+        return np.array(embeddings)
 
     def embed_query(self, text: str) -> list[float]:
         """生成查询向量"""
@@ -102,7 +81,9 @@ class BGE_M3_Embedder:
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """生成文档向量"""
         vecs = self.embed(texts)
-        return vecs.tolist()
+        if isinstance(vecs, np.ndarray):
+            return vecs.tolist()
+        return list(vecs)
 
     @property
     def dimension(self) -> int:

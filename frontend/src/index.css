@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Noto Sans SC", sans-serif;
+  --color-accent-50: #eff6ff;
+  --color-accent-100: #dbeafe;
+  --color-accent-200: #bfdbfe;
+  --color-accent-300: #93c5fd;
+  --color-accent-400: #60a5fa;
+  --color-accent-500: #3b82f6;
+  --color-accent-600: #2563eb;
+  --color-accent-700: #1d4ed8;
+  --color-accent-800: #1e40af;
+  --color-accent-900: #1e3a8a;
+  --color-surface: #f8f9fa;
+  --color-surface-alt: #f1f3f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  @apply antialiased text-slate-800 bg-surface;
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
+
+/* Markdown in chat */
+.markdown-body h1 { @apply text-xl font-bold mt-6 mb-3 text-slate-900; }
+.markdown-body h2 { @apply text-lg font-semibold mt-5 mb-2 text-slate-900; }
+.markdown-body h3 { @apply text-base font-semibold mt-4 mb-2 text-slate-800; }
+.markdown-body p { @apply my-2 leading-relaxed; }
+.markdown-body ul { @apply list-disc pl-5 my-2; }
+.markdown-body ol { @apply list-decimal pl-5 my-2; }
+.markdown-body li { @apply my-1; }
+.markdown-body code {
+  @apply bg-slate-100 text-accent-700 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+.markdown-body pre {
+  @apply bg-slate-900 text-slate-100 p-4 rounded-xl my-3 overflow-x-auto text-sm;
+}
+.markdown-body pre code {
+  @apply bg-transparent text-slate-100 p-0;
+}
+.markdown-body blockquote {
+  @apply border-l-4 border-accent-300 pl-4 my-3 italic text-slate-600;
+}
+.markdown-body table {
+  @apply w-full border-collapse my-3;
+}
+.markdown-body th {
+  @apply bg-slate-50 border border-slate-200 px-3 py-2 text-left text-sm font-semibold;
+}
+.markdown-body td {
+  @apply border border-slate-200 px-3 py-2 text-sm;
+}
+.markdown-body a {
+  @apply text-accent-600 underline;
+}

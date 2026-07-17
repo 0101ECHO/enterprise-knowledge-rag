@@ -1,7 +1,8 @@
 """知识库 Schema"""
 
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Any
+from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
 
@@ -25,13 +26,22 @@ class KnowledgeBaseResponse(BaseModel):
     description: str | None = None
     collection_name: str
     visibility: str
-    allowed_roles: list[str]
+    allowed_roles: list[str] = []
     document_count: int
     chunk_count: int
     embedding_model: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("allowed_roles", mode="before")
+    @classmethod
+    def coerce_roles(cls, v: Any) -> list:
+        if v is None or callable(v):
+            return []
+        if isinstance(v, list):
+            return v
+        return []
 
     class Config:
         from_attributes = True

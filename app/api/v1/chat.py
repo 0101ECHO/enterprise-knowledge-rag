@@ -319,13 +319,37 @@ def get_conversation(
     )
 
 
+@router.patch("/conversations/{conversation_id}", summary="重命名对话")
+def rename_conversation(
+    conversation_id: str,
+    title: str = Query(..., min_length=1, max_length=200),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """重命名对话"""
+    conversation = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.tenant_id == user["tenant_id"],
+            Conversation.user_id == user["user_id"],
+        )
+        .first()
+    )
+    if conversation is None:
+        raise NotFoundException("对话", conversation_id)
+    conversation.title = title
+    db.commit()
+    return {"message": "重命名成功", "id": conversation_id, "title": title}
+
+
 @router.delete("/conversations/{conversation_id}", summary="删除对话")
 def delete_conversation(
     conversation_id: str,
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """删除对话"""
+    """硬删除对话及其所有消息"""
     conversation = (
         db.query(Conversation)
         .filter(
@@ -339,10 +363,13 @@ def delete_conversation(
     if conversation is None:
         raise NotFoundException("对话", conversation_id)
 
-    conversation.status = "archived"
+    # 删除消息
+    db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+    # 删除对话
+    db.delete(conversation)
     db.commit()
 
-    return {"message": "对话已归档", "id": conversation_id}
+    return {"message": "对话已删除", "id": conversation_id}
 
 
 # ========== 辅助函数 ==========

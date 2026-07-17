@@ -136,6 +136,26 @@
 │   └── db/                              # 数据库
 │       ├── session.py                   # 会话管理
 │       └── init_db.py                   # 初始化与种子数据
+├── frontend/                           # React 前端 (React 19 + TypeScript + Tailwind CSS)
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Login.tsx                # 登录页
+│   │   │   ├── Dashboard.tsx            # 仪表盘 (Bento 布局)
+│   │   │   ├── KnowledgeBases.tsx       # 知识库管理
+│   │   │   ├── DocumentUpload.tsx       # 文档上传 (拖拽上传)
+│   │   │   ├── Chat.tsx                 # 智能问答 (SSE 流式)
+│   │   │   ├── Conversations.tsx        # 对话历史
+│   │   │   └── Users.tsx                # 用户管理
+│   │   ├── components/
+│   │   │   ├── Layout.tsx               # 侧边栏 + 响应式布局
+│   │   │   └── ProtectedRoute.tsx       # 路由鉴权守卫
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx           # JWT 认证上下文
+│   │   └── api/
+│   │       └── client.ts                # Axios 实例 (拦截器)
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── index.html
 ├── docker-compose.yml                   # Docker Compose 部署
 ├── Dockerfile                           # 应用镜像构建
 ├── requirements.txt                     # Python 依赖
@@ -160,16 +180,18 @@ cp .env.example .env
 #    - DEEPSEEK_API_KEY: 你的 DeepSeek API Key
 #    - 其他配置保持默认即可
 
-# 4. 一键启动所有服务
+# 4. 一键启动所有后端服务
 docker-compose up -d
 
-# 5. 查看启动日志
-docker-compose logs -f app
-
-# 6. 访问服务
-#    API 文档: http://localhost:8000/docs
-#    健康检查: http://localhost:8000/health
+# 5. 启动前端开发服务器
+cd frontend
+npm install
+npm run dev
 ```
+
+访问:
+- **前端页面**: http://localhost:3000
+- **API 文档**: http://localhost:8800/docs
 
 ### 方式二: 本地开发运行
 

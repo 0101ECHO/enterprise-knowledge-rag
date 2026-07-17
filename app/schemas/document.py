@@ -1,7 +1,8 @@
 """文档 Schema"""
 
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Any
+from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
 
@@ -17,6 +18,15 @@ class DocumentResponse(BaseModel):
     doc_metadata: dict = Field(default_factory=dict, alias="metadata")
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("doc_metadata", mode="before")
+    @classmethod
+    def coerce_metadata(cls, v: Any) -> dict:
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        return {}
 
     class Config:
         from_attributes = True

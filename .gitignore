@@ -50,3 +50,8 @@ models/
 
 # Docker volumes
 docker/data/
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+
